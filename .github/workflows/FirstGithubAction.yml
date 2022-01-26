@@ -1,11 +1,58 @@
-name: learn-github-actions
+name: learn github-actions
+
 on: [push]
+
 jobs:
-  build:
+  style_check: 
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: psf/black@stable
-      with:
-        options: "--check"
-        src: "./"
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8.10'
+      - name: Install style checker
+        run: pip install --user black
+      - name: "Run style check"
+        run: black --check .      
+  test:
+    runs-on: ubuntu-latest
+    needs: style_check
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8.10'
+      - name: Install dependencies
+        run: pip install --user pytest numpy matplotlib coverage
+      - name: Run coverage
+        run: coverage run -m pytest
+      - name: Upload coverage as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-report
+          path: .coverage
+          retention-days: 1
+  coverage_report:
+    runs-on: ubuntu-latest
+    needs: test
+    steps: 
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8.10'
+      - name: Install dependencies
+        run: pip install --user coverage
+      - name: Download coverage-report
+        uses: actions/download-artifact@v2
+        with:
+          name: coverage-report
+      - name: Create coverage report
+        run: coverage report 
+      - name: Create coverage xml report
+        run: coverage xml
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-report-xml
+          path: coverage.xml
+          retention-days: 14
